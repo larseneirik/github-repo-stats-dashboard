@@ -10,6 +10,13 @@ import json
 import base64
 import requests
 
+# Set page config
+st.set_page_config(
+    page_title="Package Analytics Dashboard",
+    page_icon="📊",
+    layout="wide"
+)
+
 # Initialize credentials quietly
 try:
     encoded_creds = st.secrets["ENCODED_CREDS"]
