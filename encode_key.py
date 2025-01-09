@@ -2,7 +2,7 @@ import base64
 import json
 
 # Read the actual credentials from your JSON file
-with open('respellcall-5dd463bcecf9.json', 'r') as f:
+with open('<your-gcp-json-key.json>', 'r') as f:
     creds = json.load(f)
 
 # Encode to base64

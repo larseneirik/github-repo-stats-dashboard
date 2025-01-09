@@ -14,8 +14,8 @@ A Streamlit dashboard that provides comprehensive analytics for Python packages,
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/Github-Stats.git
-cd Github-Stats
+git clone https://github.com/tonykipkemboi/github-repo-stats-dashboard.git
+cd github-repo-stats-dashboard
 ```
 
 2. Install dependencies:
