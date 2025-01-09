@@ -200,6 +200,10 @@ def fetch_lifetime_downloads(package_name):
 
 st.title("Package Analytics Dashboard")
 
+# Initialize session state for repo data if not exists
+if 'repo_data' not in st.session_state:
+    st.session_state.repo_data = None
+
 # Sidebar controls
 with st.sidebar:
     st.header("Settings")
@@ -234,6 +238,52 @@ with st.sidebar:
     if show_moving_average:
         ma_window = st.slider("Moving Average Window", 2, 30, 7)
 
+@st.fragment
+def show_releases():
+    if st.session_state.repo_data is not None:
+        st.header("Release History")
+        with st.expander("📦 View All Releases", expanded=True):
+            if st.session_state.repo_data['releases_data']:
+                # Create a list of release options
+                releases = st.session_state.repo_data['releases_data']
+                release_options = [
+                    f"📦 {release['tag_name']} - {datetime.strptime(release['published_at'], '%Y-%m-%dT%H:%M:%SZ').strftime('%Y-%m-%d')}"
+                    for release in releases
+                ]
+                
+                selected_release = st.selectbox(
+                    "Select a release to view details",
+                    release_options,
+                    index=0
+                )
+                
+                # Find and display the selected release
+                selected_index = release_options.index(selected_release)
+                release = releases[selected_index]
+                st.markdown("---")
+                
+                # Display release body with better formatting
+                body = release['body']
+                
+                # Check if it's an automated release note (contains "What's Changed")
+                if "What's Changed" in body:
+                    sections = body.split('\n\n')
+                    for section in sections:
+                        if section.strip():
+                            # Add proper headers for each section
+                            if section.startswith("What's Changed"):
+                                st.markdown("### 🔄 What's Changed")
+                            elif section.startswith("New Contributors"):
+                                st.markdown("### 👥 New Contributors")
+                            else:
+                                st.markdown(section)
+                            st.markdown("---")
+                else:
+                    # For manual release notes, just display as is
+                    st.markdown(body)
+            else:
+                st.info("No releases found for this package.")
+
 if st.sidebar.button("Fetch Stats"):
     with st.spinner("Fetching statistics..."):
         try:
@@ -246,7 +296,26 @@ if st.sidebar.button("Fetch Stats"):
             # Fetch GitHub stats
             df_github, repo_data = fetch_github_stats_api(github_repo)
             
+            # Store repo_data in session state
+            st.session_state.repo_data = repo_data
+            
             if df_pypi is not None and df_github is not None:
+                # Display Quick Package Info at the top
+                with st.expander("📌 Quick Package Info", expanded=False):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown(f"""
+                        - 📅 **Created**: {pd.to_datetime(repo_data['created_at']).strftime('%Y-%m-%d')}
+                        - 🔄 **Last Updated**: {pd.to_datetime(repo_data['updated_at']).strftime('%Y-%m-%d')}
+                        """)
+                    with col2:
+                        st.markdown(f"""
+                        - 💻 **Language**: {repo_data['language']}
+                        - 📜 **License**: {repo_data.get('license', {}).get('name', 'Not specified')}
+                        """)
+                    if repo_data['description']:
+                        st.markdown(f"📝 **Description**: {repo_data['description']}")
+
                 # Calculate all metrics first
                 # PyPI metrics
                 today = df_pypi.iloc[-1] if not df_pypi.empty else pd.Series({'date': None, 'downloads': 0})
@@ -285,7 +354,8 @@ if st.sidebar.button("Fetch Stats"):
 
                 # Key Metrics Overview Section
                 st.header("📊 Key Metrics Overview")
-                
+                st.divider()
+
                 # First row - Package Downloads
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
@@ -378,28 +448,9 @@ if st.sidebar.button("Fetch Stats"):
                         help="Number of open issues"
                     )
 
-                # Quick Info Box
-                st.markdown("---")
-                with st.expander("📌 Quick Package Info", expanded=True):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown(f"""
-                        - 📅 **Created**: {pd.to_datetime(repo_data['created_at']).strftime('%Y-%m-%d')}
-                        - 🔄 **Last Updated**: {pd.to_datetime(repo_data['updated_at']).strftime('%Y-%m-%d')}
-                        """)
-                    with col2:
-                        st.markdown(f"""
-                        - 💻 **Language**: {repo_data['language']}
-                        - 📜 **License**: {repo_data.get('license', {}).get('name', 'Not specified')}
-                        """)
-                    if repo_data['description']:
-                        st.markdown(f"📝 **Description**: {repo_data['description']}")
-
-                st.markdown("---")
-                
                 # Detailed Statistics Sections
                 st.header("📈 Detailed Statistics")
-                
+
                 # Downloads chart
                 st.subheader("Download Trends")
                 fig_downloads = go.Figure()
@@ -410,7 +461,7 @@ if st.sidebar.button("Fetch Stats"):
                     mode='lines',
                     line=dict(color='blue')
                 ))
-                
+
                 if show_moving_average:
                     df_pypi['MA'] = df_pypi['downloads'].rolling(window=ma_window).mean()
                     fig_downloads.add_trace(go.Scatter(
@@ -419,7 +470,7 @@ if st.sidebar.button("Fetch Stats"):
                         name=f'{ma_window}-day Moving Average',
                         line=dict(color='red', dash='dash')
                     ))
-                
+
                 fig_downloads.update_layout(
                     title=f'Daily Downloads',
                     xaxis_title='Date',
@@ -427,7 +478,7 @@ if st.sidebar.button("Fetch Stats"):
                     hovermode='x unified'
                 )
                 st.plotly_chart(fig_downloads, use_container_width=True)
-                
+
                 if show_raw_data:
                     st.subheader("Raw Data")
                     tab1, tab2 = st.tabs(["PyPI Data", "GitHub Data"])
@@ -435,8 +486,8 @@ if st.sidebar.button("Fetch Stats"):
                         st.dataframe(df_pypi.style.format({'downloads': '{:,.0f}'}))
                     with tab2:
                         st.dataframe(df_github)
-                
-                                # Stars history chart
+
+                # Stars history chart
                 st.subheader("Stars Growth")
                 if repo_data.get('stars_history'):
                     stars_df = pd.DataFrame(repo_data['stars_history'])
@@ -475,6 +526,9 @@ if st.sidebar.button("Fetch Stats"):
                             showlegend=True
                         )
                         st.plotly_chart(fig_stars, use_container_width=True)
-                
+
         except Exception as e:
             st.error(f"Error fetching data: {str(e)}")
+
+# Call the releases fragment outside the Fetch Stats block
+show_releases()
