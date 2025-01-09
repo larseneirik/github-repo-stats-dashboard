@@ -233,7 +233,6 @@ with st.sidebar:
         ["daily", "weekly", "monthly"]
     )
 
-    show_raw_data = st.checkbox("Show Raw Data", False)
     show_moving_average = st.checkbox("Show Moving Average", True)
     if show_moving_average:
         ma_window = st.slider("Moving Average Window", 2, 30, 7)
@@ -478,14 +477,6 @@ if st.sidebar.button("Fetch Stats"):
                     hovermode='x unified'
                 )
                 st.plotly_chart(fig_downloads, use_container_width=True)
-
-                if show_raw_data:
-                    st.subheader("Raw Data")
-                    tab1, tab2 = st.tabs(["PyPI Data", "GitHub Data"])
-                    with tab1:
-                        st.dataframe(df_pypi.style.format({'downloads': '{:,.0f}'}))
-                    with tab2:
-                        st.dataframe(df_github)
 
                 # Stars history chart
                 st.subheader("Stars Growth")
