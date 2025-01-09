@@ -248,7 +248,7 @@ with st.sidebar:
 def show_releases():
     if st.session_state.repo_data is not None:
         st.header("Release History")
-        with st.expander("📦 View All Releases", expanded=True):
+        with st.expander("📦 View All Releases", expanded=False):
             if st.session_state.repo_data['releases_data']:
                 # Create a list of release options
                 releases = st.session_state.repo_data['releases_data']
